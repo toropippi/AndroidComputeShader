@@ -1,19 +1,58 @@
 ﻿#pragma kernel CSMain
 
-int time;
+float mx;
+float my;
 RWTexture2D<float4> Tex;
-RWStructuredBuffer<int> A;
 RWStructuredBuffer<uint> atmicBUF;
 
-groupshared float block[256];
+groupshared uint block[1];
 [numthreads(64, 1, 1)]
-void CSMain (uint3 threadId : SV_DispatchThreadID)
+void CSMain (int2 threadId : SV_DispatchThreadID ,uint2 lid : SV_GroupThreadID)
 {
-	float4 c = 1;
-	c.xy = 1.0 * ((threadId.xy + time) % 1024) / 1024.0;
-    Tex[threadId.xy] = c;
-	InterlockedAdd(atmicBUF[0], threadId.x);
+	float2 pos = 0.001f* (threadId.xy-1024);
+	pos.x += mx;
+	pos.y += my;
+	float4 col;
 
+	float re = 0;
+	float im = 0;
+	float tmp;
+	int num = 4096;
+	for (int i = 0; i < 64; i++) 
+	{
+		//zn+1=zn*zn+c
+		tmp = re * im;
+		re = re * re - im * im + pos.x;
+		im = 2.0 * tmp + pos.y;
+		if (re > 65536.0f) {
+			num = i;
+			break;
+		}
+	}
+
+
+	col.x = abs(re) * (1024.0f + 0.125f * num);
+	col.x -= trunc(col.x);
+
+	col.y = abs(im) * (1024.0f + 0.125f * num);
+	col.y -= trunc(col.y);
+
+	col.z = 0.125f * num;
+	col.z -= trunc(col.z);
+
+	col.w = 1024.0f / ((float)num + 1024.0f);
+
+	Tex[threadId.xy] = col;
+
+	//画素値を0-255に変換して合計する
+	uint sum = (uint)((col.x + col.y + col.z) * 255.0f);
+
+	if (lid.x % 64 == 0)block[0] = 0;
 	GroupMemoryBarrierWithGroupSync();
-	A[threadId.x + threadId.y * 1024] = (int)(c.x * 2342.2f * c.y + c.y * 1343.5f + 453451.0f);
+	//共有メモリでアトミック演算して合計
+	InterlockedAdd(block[0], sum);
+	GroupMemoryBarrierWithGroupSync();
+	if (lid.x == 0) {//グローバルメモリにアトミック演算して合計
+		InterlockedAdd(atmicBUF[0], block[0]);
+	}
 }
