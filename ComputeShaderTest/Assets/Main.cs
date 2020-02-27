@@ -36,7 +36,7 @@ public class Main : MonoBehaviour
         count = 0;
         mx = 0;
         my = 0;
-        scale = 1f;
+        scale = 1.0f;
         backDist = 0f;
     }
 
@@ -72,8 +72,8 @@ public class Main : MonoBehaviour
         if (Input.touchCount == 1)
         {
             Touch touch1 = Input.GetTouch(0);
-            mx -= 0.001f * scale * touch1.deltaPosition.x;
-            my -= 0.001f * scale * touch1.deltaPosition.y;
+            mx -= 0.004f * scale * touch1.deltaPosition.x;
+            my -= 0.004f * scale * touch1.deltaPosition.y;
         }
 
         //タッチ操作
@@ -91,7 +91,7 @@ public class Main : MonoBehaviour
             {
                 // タッチ位置の移動後、長さを再測し、前回の距離からの相対値を取る。
                 float newDist = Vector2.Distance(touch1.position, touch2.position);
-                scale = lastscale + (newDist - backDist) / 1024.0f;
+                scale = lastscale * Mathf.Exp((backDist- newDist) / 512.0f);
             }
         }
         else 
