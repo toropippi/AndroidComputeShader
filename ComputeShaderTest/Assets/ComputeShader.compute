@@ -2,6 +2,7 @@
 
 float mx;
 float my;
+float sc;
 RWTexture2D<float4> Tex;
 RWStructuredBuffer<uint> atmicBUF;
 
@@ -9,7 +10,7 @@ groupshared uint block[1];
 [numthreads(64, 1, 1)]
 void CSMain (int2 threadId : SV_DispatchThreadID ,uint2 lid : SV_GroupThreadID)
 {
-	float2 pos = 0.001f* (threadId.xy-1024);
+	float2 pos = 0.001f * sc * (threadId.xy - 1024);
 	pos.x += mx;
 	pos.y += my;
 	float4 col;
