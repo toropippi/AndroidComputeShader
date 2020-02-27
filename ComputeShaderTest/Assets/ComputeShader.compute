@@ -2,11 +2,18 @@
 
 int time;
 RWTexture2D<float4> Tex;
+RWStructuredBuffer<int> A;
+RWStructuredBuffer<uint> atmicBUF;
 
+groupshared float block[256];
 [numthreads(64, 1, 1)]
 void CSMain (uint3 threadId : SV_DispatchThreadID)
 {
 	float4 c = 1;
 	c.xy = 1.0 * ((threadId.xy + time) % 1024) / 1024.0;
     Tex[threadId.xy] = c;
+	InterlockedAdd(atmicBUF[0], threadId.x);
+
+	GroupMemoryBarrierWithGroupSync();
+	A[threadId.x + threadId.y * 1024] = (int)(c.x * 2342.2f * c.y + c.y * 1343.5f + 453451.0f);
 }

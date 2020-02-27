@@ -9,10 +9,15 @@ public class Main : MonoBehaviour
 
     RenderTexture renderTexture;
     int size = 1024;
-    int count;
+    public int count;
     int kernelIndex;
+    int[] data;
+
+    ComputeBuffer buffer;
+    ComputeBuffer atomicbuffer;
     void Start()
     {
+        data = new int[size * size];
         renderTexture = new RenderTexture(size, size, 1, RenderTextureFormat.ARGB32);
         renderTexture.enableRandomWrite = true;
         renderTexture.filterMode = FilterMode.Point;//読み取り時に自動補間しない
@@ -24,6 +29,12 @@ public class Main : MonoBehaviour
         {
             kernelIndex = computeShader.FindKernel("CSMain");
             computeShader.SetTexture(kernelIndex, "Tex", renderTexture);
+
+            buffer = new ComputeBuffer(size*size, sizeof(int));
+            computeShader.SetBuffer(kernelIndex, "A", buffer);
+
+            atomicbuffer = new ComputeBuffer(1, sizeof(int));
+            computeShader.SetBuffer(kernelIndex, "atmicBUF", atomicbuffer);
         }
         count = 0;
     }
@@ -34,6 +45,20 @@ public class Main : MonoBehaviour
         {
             computeShader.SetInt("time", count % 1024);
             computeShader.Dispatch(kernelIndex, size / 64, size, 1);
+            if (count % 32 == 13) 
+            {
+                buffer.GetData(data);
+                count += data[count % (1024 * 1024)];
+                count %= (1024 * 1024);
+
+                uint[] tmp=new uint[1];
+                atomicbuffer.GetData(tmp);
+                count += (int)Mathf.Abs(tmp[0]);
+                if (count < 0) count += 2100000000;
+                count %= (1024 * 1024);
+                count += 1024 * 1024;
+            }
+            
         }
         count++;
     }
